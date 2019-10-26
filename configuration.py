@@ -10,3 +10,7 @@ REPORT_SERVER_PATH = 'contest/jury/judge/automated/'
 
 TEST_FILES_PATH = '<ADDRESS IN WHICH TESTS ARE LOCATED>'
 TEST_HANDLER_MODULE = "<MODULE NAME>"
+
+MAX_MEMORY_CONTESTANT = 50
+
+PROJECT_ROOT = "/home/soroushvt/code/webelopers/judge/"
