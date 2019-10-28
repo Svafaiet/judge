@@ -141,9 +141,9 @@ def worker_run_tests(git_url: str, test_id: int, group_id: int):\
 
     try:
         project_handler.run(image_id=image_id, port=port)
-        ip = "127.0.0.1" + ":" + str(port)
+        ip = "127.0.0.1"
         try:
-            test_results = tests.run_test(config.TEST_FILES_PATH, config.TEST_HANDLER_MODULE, group_id, test_id, ip)
+            test_results = tests.run_test(config.TEST_FILES_PATH, config.TEST_HANDLER_MODULE, test_id, ip, port)
             test_results = {    # with assumption of is_accepted as first argument and log as second argument
                 "is_accepted": test_results[0],
                 "log": test_results[1],
