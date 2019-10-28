@@ -8,7 +8,7 @@ from shutil import copyfile
 from configuration import MAX_MEMORY_CONTESTANT, PROJECT_ROOT
 
 
-class ContestantProject:
+class ContestantProjectHandler:
     CONTESTANT_SETTINGS_NAME = "server_settings.py"
     CONTESTANT_SETTINGS_PATH = os.path.join(PROJECT_ROOT, "templates", CONTESTANT_SETTINGS_NAME)
 
@@ -19,15 +19,15 @@ class ContestantProject:
         project_dir = update_git(root_dir=repo_dir, group_id=group_id, git_url=git_url)
 
         copyfile(
-            ContestantProject.CONTESTANT_SETTINGS_PATH,
-            os.path.join(project_dir, ContestantProject.CONTESTANT_SETTINGS_NAME)
+            ContestantProjectHandler.CONTESTANT_SETTINGS_PATH,
+            os.path.join(project_dir, ContestantProjectHandler.CONTESTANT_SETTINGS_NAME)
         )
 
         out, error = run_cmd(cmd="./scripts/build_image.sh " + project_dir, directory=".")
         build_msg = out.decode("utf-8")
         image_id = re.search(r"Successfully built ((\w|\d)+)\n", build_msg).group(1)
 
-        os.remove(os.path.join(project_dir, ContestantProject.CONTESTANT_SETTINGS_NAME))
+        os.remove(os.path.join(project_dir, ContestantProjectHandler.CONTESTANT_SETTINGS_NAME))
 
         print(image_id)
         # handle error requirements.txt: no such file or directory
@@ -55,9 +55,11 @@ class ContestantProject:
         # return run_cmd(cmd="./scripts/stop_container.sh " + container_name, directory=".")
 
 
+DEFAULT_PROJECT_HANDLER = ContestantProjectHandler()
+
 # import os
 #
-# proj = ContestantProject()
+# proj = ContestantProjectHandler()
 # img_hash = proj.setup(os.environ['HOME'] + "/temp", 10, "git@git.edu.sharif.edu:webelopers2019/terminator.git")
 # container_name = proj.run(img_hash, 8000)
 # proj.kill(img_hash)

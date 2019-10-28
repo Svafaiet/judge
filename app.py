@@ -2,14 +2,16 @@ import pickle as pk
 import sys
 from ast import literal_eval
 from datetime import datetime, timedelta
-from threading import Thread
+from threading import Thread, Lock
 from urllib.error import URLError
 from urllib.request import urlopen
 
 import configuration as config
 import logger
 import requests
-import tests
+import socket
+import project_handler as projects
+import test_runner as tests
 import utils
 from flask import Flask, request
 from selenium import webdriver
@@ -24,10 +26,37 @@ driver_options.add_argument('window-size=1980,1080')
 # driver_options = Options()
 # driver_options.headless = True
 
+# groups submission status
 group_status = {}
 
-with open('team_id_name_data.PyData', mode='rb') as read_file:
-    team_names = pk.load(read_file)
+# port availability status
+port_status = {}
+
+def find_and_lock_port() -> int:
+    port = config.PORT_COUNTER_START
+    lock = Lock()
+    while port < 65535:
+        lock.acquire()
+        if not port in port_status:
+            s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+            try:
+                s.bind(("localhost", port))
+                port_status[port] = s
+                return port
+            except socket.error:
+                pass
+            finally:
+                s.close()
+        lock.release()
+        port += 1
+    raise Exception("No Port Found")
+
+
+def release_port(port: int) -> None:
+    lock = Lock()
+    lock.acquire()
+    port_status.pop(port)
+    lock.release()
 
 
 def test_and_set_active(group_id):
@@ -61,33 +90,28 @@ def deactivate_status(group_id):
 @app.route('/', methods=['GET', 'POST'])
 def handle_request():
     request_data = request.form
-    if 'ip' not in request_data or 'group_id' not in request_data or 'port' not in request_data:
+    if 'test_id' not in request_data or 'group_id' not in request_data or 'git_url' not in request_data:
         logger.log_error('malformed post request data.')
         return 'malformed post request data.', 400
 
     group_id = request_data['group_id']
 
     if test_and_set_active(group_id):
-        logger.log_info('lock acquired for team "{}" with group_id {}'.format(team_names[int(group_id)], group_id))
-        ip = 'http://{}:{}'.format(request_data['ip'], request_data['port'])
-        test_order = None
-        if 'test_order' in request_data:
-            test_order = literal_eval(request_data['test_order'])
-            logger.log_info(
-                'custom test order {} was given for team "{}" with group_id {}'.format(test_order,
-                                                                                       team_names[int(group_id)],
-                                                                                       group_id))
-
-            if type(test_order) == int:
-                test_order = [test_order]
-
-        process_request(ip, group_id, test_order)
+        logger.log_info('lock acquired for team with group_id {}'.format(group_id))
+        test_id = int(request_data['test_id'])
+        git_url = request_data['git_url']
+        logger.log_info(
+            'test id {} was given for team with group_id {}'.format(
+                test_id,
+                group_id)
+        )
+        process_request(git_url=git_url, group_id=group_id, test_id=test_id)
         logger.log_success(
-            'test for team "{}" with group_id {} initiated successfully'.format(team_names[int(group_id)], group_id))
+            'test for team with group_id {} initiated successfully'.format(group_id))
         return "success - test initiated"
     else:
         logger.log_error(
-            'another test for team "{}" with group_id {} is in progress'.format(team_names[int(group_id)], group_id))
+            'another test for team with group_id {} is in progress'.format(group_id))
         return "error - existing test in progress", 406
 
 
@@ -105,79 +129,104 @@ def _check_url_availability(url):
     return urlopen(url).getcode()
 
 
-def worker_run_tests(ip, test_order, group_id):
+def worker_run_tests(git_url: str, test_id: int, group_id: int):\
+
     test_results = {}
 
-    if not check_url_availability(ip):
-        test_results['verdict'] = 'not_reachable'
-        test_results['test_order'] = test_order[0]  # TOF :(
-        test_results['log'] = 'not reachable'
-        test_results['trace'] = ''
-        return test_results
+    port = find_and_lock_port()
 
-    if test_order is not None:
-        for test_id in test_order:
-            test_name = 'test_{}'.format(test_id)
-            test_function = getattr(tests, test_name)
+    project_handler = projects.DEFAULT_PROJECT_HANDLER
 
-            try:
-                test_result, string_output, stack_trace = run_test(test_function, ip, group_id)
-            except TimeoutError:
-                test_result, string_output, stack_trace = False, 'timeout', 'timeout'
+    image_id = project_handler.setup(repo_dir=config.REPO_PATH, group_id=group_id, git_url=git_url)
 
-            test_results['verdict'] = 'ok' if test_result else 'ez_sag'
-            test_results['test_order'] = test_id
-            test_results['log'] = string_output
-            test_results['trace'] = stack_trace
-
-    else:
-        for entry in dir(tests):
-            if not entry.startswith('_'):
-                test_function = getattr(tests, entry)
-
-                try:
-                    options = webdriver.ChromeOptions()
-                    options.add_argument('headless')
-                    driver = webdriver.Chrome(chrome_options=options)
-                    test_result, string_output, stack_trace = run_test(test_function, ip, group_id)
-                    driver.delete_all_cookies()
-                    utils.clear_cache(driver)
-                    driver.close()
-                except TimeoutError:
-                    test_result, string_output, stack_trace = False, 'timeout', 'timeout'
-
-                test_results[entry] = test_result
-                test_results['{}_log'.format(entry)] = string_output
-                test_results['{}_trace'.format(entry)] = stack_trace
-
+    try:
+        project_handler.run(image_id=image_id, port=port)
+        ip = "127.0.0.1" + ":" + str(port)
+        try:
+            test_results = tests.run_test(config.TEST_FILES_PATH, config.TEST_HANDLER_MODULE, group_id, test_id, ip)
+            test_results = {    # with assumption of is_accepted as first argument and log as second argument
+                "is_accepted": test_results[0],
+                "log": test_results[1],
+            }
+        except TimeoutError as e:
+            test_results = {
+                "is_accepted": False,
+                "log": "timeout"
+            }
+    except Exception as e:
+        test_results = {
+            "is_accepted": False,
+            "log": str(e),
+        }
+    finally:
+        release_port(port)
+        project_handler.kill(image_id)
     return test_results
+    # if test_order is not None:
+    #     for test_id in test_order:
+    #         test_name = 'test_{}'.format(test_id)
+    #         test_function = getattr(tests, test_name)
+    #
+    #         try:
+    #             test_result, string_output, stack_trace = run_test(test_function, ip, group_id)
+    #         except TimeoutError:
+    #             test_result, string_output, stack_trace = False, 'timeout', 'timeout'
+    #
+    #         test_results['verdict'] = 'ok' if test_result else 'ez_sag'
+    #         test_results['test_order'] = test_id
+    #         test_results['log'] = string_output
+    #         test_results['trace'] = stack_trace
+    #
+    # else:
+    #     for entry in dir(tests):
+    #         if not entry.startswith('_'):
+    #             test_function = getattr(tests, entry)
+    #
+    #             try:
+    #                 options = webdriver.ChromeOptions()
+    #                 options.add_argument('headless')
+    #                 driver = webdriver.Chrome(chrome_options=options)
+    #                 test_result, string_output, stack_trace = run_test(test_function, ip, group_id)
+    #                 driver.delete_all_cookies()
+    #                 utils.clear_cache(driver)
+    #                 driver.close()
+    #             except TimeoutError:
+    #                 test_result, string_output, stack_trace = False, 'timeout', 'timeout'
+    #
+    #             test_results[entry] = test_result
+    #             test_results['{}_log'.format(entry)] = string_output
+    #             test_results['{}_trace'.format(entry)] = stack_trace
+    #
+    # return test_results
 
 
-def worker_function(ip, group_id, test_order):
+def worker_function(git_url, group_id, test_id):
     logger.log_info(
-        'running tests for team "{}" with group_id {} on ip address {}'.format(team_names[int(group_id)], group_id, ip))
-    test_results = worker_run_tests(ip, test_order, group_id)
-    logger.log_info('releasing lock for team "{}" with group_id {}'.format(team_names[int(group_id)], group_id))
+        'running tests for team with group_id {} on git url {}'.format(group_id, git_url))
+    test_results = worker_run_tests(git_url=git_url, test_id=test_id, group_id=group_id)
+    logger.log_info('releasing lock for team with group_id {}'.format(group_id))
     deactivate_status(group_id)
     logger.log_info(
-        'reporting test results for team "{}" with group_id {} on ip address {} to competition server'.format(
-            team_names[int(group_id)], group_id, ip))
-    report_test_results(group_id, test_results)
+        'reporting test results for team with group_id {} on git url {} to competition server'.format(group_id,
+                                                                                                           git_url))
+    report_test_results(group_id=group_id, test_id=test_id, test_results=test_results)
     logger.log_success(
-        'test for team "{}" with group_id {} finished successfully'.format(team_names[int(group_id)], group_id))
+        'test for team with group_id {} finished successfully'.format(group_id))
 
 
-def report_test_results(group_id, test_results):
-    logger.log_log('log report for team "{}" with group_id {}'.format(team_names[int(group_id)], group_id))
+def report_test_results(group_id, test_id, test_results):
+    logger.log_log(
+        'log report for team with group_id {} for test_id {}'.format(group_id, test_id))
     logger.log_log(test_results)
     test_results['group_id'] = group_id
+    test_results['test_id'] = test_id
     requests.post(
         'http://{}:{}/{}'.format(config.REPORT_SERVER_HOST, config.REPORT_SERVER_PORT, config.REPORT_SERVER_PATH),
         test_results)
 
 
-def process_request(ip, group_id, test_order):
-    thread = Thread(target=worker_function, args=(ip, group_id, test_order))
+def process_request(git_url, group_id, test_id):
+    thread = Thread(target=worker_function, args=(git_url, group_id, test_id))
     thread.start()
 
 
@@ -193,7 +242,7 @@ def run_test(test_function, ip, group_id):
         )
     except Exception as exception:
         logger.log_warn(
-            'test for for team "{}" with group_id {} ended with exception'.format(team_names[int(group_id)], group_id))
+            'test for for team with group_id {} ended with exception'.format(group_id))
         return False, ('Exception: ' + str(exception)), 'HMM'
 
     return result, string_output, 'HMM'
@@ -206,7 +255,6 @@ def runserver(port=config.PORT):
 if __name__ == '__main__':
 
     try:
-        utils.load_admins("admins.json")
         if len(sys.argv) > 1:
             server_port = int(sys.argv[1])
             logger.log_info('starting server on custom port', server_port)

@@ -14,3 +14,7 @@ TEST_HANDLER_MODULE = "<MODULE NAME>"
 MAX_MEMORY_CONTESTANT = 50
 
 PROJECT_ROOT = "/home/soroushvt/code/webelopers/judge/"
+
+PORT_COUNTER_START = 9000
+
+REPO_PATH = "/home/soroushvt/code/webelopers/repositories"
