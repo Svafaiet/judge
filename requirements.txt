@@ -3,3 +3,4 @@ Flask==1.1.1
 timeout-decorator==0.4.1
 selenium==3.141.0
 requests==2.22.0
+bs4==0.0.1
