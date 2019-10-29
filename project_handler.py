@@ -44,6 +44,7 @@ class ContestantProjectHandler:
             name=container_name,
             oom_kill_disable=False,
             ports={"8000": port},
+                    
         )
         # run_cmd(cmd="./scripts/run_container.sh " + container_name + " " + image_id, directory=".")
         print("server_is_up")

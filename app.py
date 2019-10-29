@@ -132,9 +132,9 @@ def worker_run_tests(git_url: str, test_id: int, group_id: int):
 
     try:
         container_id = project_handler.run(image_id=image_id, port=port)
-        ip = "127.0.0.1"
+        ip = "http://127.0.0.1"
         try:
-            test_results = run_test(test_id, ip, port, group_id)
+            test_results = run_test(ip, port, test_id, group_id)
             test_results = {  # with assumption of is_accepted as first argument and log as second argument
                 "is_accepted": test_results[0],
                 "log": test_results[1],
@@ -151,7 +151,7 @@ def worker_run_tests(git_url: str, test_id: int, group_id: int):
         }
     finally:
         release_port(port)
-        project_handler.kill(container_id)
+        # project_handler.kill(container_id)
     return test_results
     # if test_order is not None:
     #     for test_id in test_order:
