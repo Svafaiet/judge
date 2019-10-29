@@ -5,12 +5,12 @@ import uuid
 import docker
 import os
 from shutil import copyfile
-from configuration import MAX_MEMORY_CONTESTANT, PROJECT_ROOT
+from configuration import MAX_MEMORY_CONTESTANT, BASE_DIR
 
 
 class ContestantProjectHandler:
     CONTESTANT_SETTINGS_NAME = "server_settings.py"
-    CONTESTANT_SETTINGS_PATH = os.path.join(PROJECT_ROOT, "templates", CONTESTANT_SETTINGS_NAME)
+    CONTESTANT_SETTINGS_PATH = os.path.join(BASE_DIR, "templates", CONTESTANT_SETTINGS_NAME)
 
     def __init__(self):
         self.client = docker.from_env()
@@ -51,7 +51,7 @@ class ContestantProjectHandler:
         return container_name
 
     def kill(self, container_name: str):
-        self.client.containers.stop(container_name)
+        self.client.containers.get(container_name).stop()
         # return run_cmd(cmd="./scripts/stop_container.sh " + container_name, directory=".")
 
 

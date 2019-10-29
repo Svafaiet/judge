@@ -1,3 +1,5 @@
+import os
+
 HOST = '0.0.0.0'
 PORT = 9098
 TEST_TIMEOUT_S = 60
@@ -8,12 +10,12 @@ REPORT_SERVER_HOST = '<IP ADDRESS OF TARGET REPORT SERVER>'
 REPORT_SERVER_PORT = 80
 REPORT_SERVER_PATH = 'contest/jury/judge/automated/'
 
-TEST_FILES_PATH = '<ADDRESS IN WHICH TESTS ARE LOCATED>'
-TEST_HANDLER_MODULE = "<MODULE NAME>"
+BASE_DIR = os.path.join(os.getenv("HOME"), "code", "webelopers", "judge")
+
+TEST_MODULE = "main_func"
+TEST_FILES_PATH = os.path.join(os.getenv("HOME"), "code", "webelopers", "w_test")
 
 MAX_MEMORY_CONTESTANT = 50
-
-PROJECT_ROOT = "/home/soroushvt/code/webelopers/judge/"
 
 PORT_COUNTER_START = 9000
 

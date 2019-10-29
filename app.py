@@ -14,23 +14,16 @@ import project_handler as projects
 import test_runner as tests
 import utils
 from flask import Flask, request
-from selenium import webdriver
 from timeout_decorator import timeout, TimeoutError
 
 app = Flask(__name__)
-
-driver_options = webdriver.ChromeOptions()
-driver_options.add_argument('headless')
-driver_options.add_argument('window-size=1980,1080')
-
-# driver_options = Options()
-# driver_options.headless = True
 
 # groups submission status
 group_status = {}
 
 # port availability status
 port_status = {}
+
 
 def find_and_lock_port() -> int:
     port = config.PORT_COUNTER_START
@@ -65,8 +58,6 @@ def test_and_set_active(group_id):
             'test_active': False,
             'test_count': 0,
             'last_run': None,
-            # 'driver': webdriver.Firefox(options=driver_options)
-            'driver': webdriver.Chrome(chrome_options=driver_options)
         }
 
     if not group_status[group_id]['test_active']:
@@ -129,22 +120,22 @@ def _check_url_availability(url):
     return urlopen(url).getcode()
 
 
-def worker_run_tests(git_url: str, test_id: int, group_id: int):\
-
+def worker_run_tests(git_url: str, test_id: int, group_id: int):
     test_results = {}
 
     port = find_and_lock_port()
+    print("port is " + str(port))
 
     project_handler = projects.DEFAULT_PROJECT_HANDLER
 
     image_id = project_handler.setup(repo_dir=config.REPO_PATH, group_id=group_id, git_url=git_url)
 
     try:
-        project_handler.run(image_id=image_id, port=port)
+        container_id = project_handler.run(image_id=image_id, port=port)
         ip = "127.0.0.1"
         try:
-            test_results = tests.run_test(config.TEST_FILES_PATH, config.TEST_HANDLER_MODULE, test_id, ip, port)
-            test_results = {    # with assumption of is_accepted as first argument and log as second argument
+            test_results = run_test(test_id, ip, port, group_id)
+            test_results = {  # with assumption of is_accepted as first argument and log as second argument
                 "is_accepted": test_results[0],
                 "log": test_results[1],
             }
@@ -160,7 +151,7 @@ def worker_run_tests(git_url: str, test_id: int, group_id: int):\
         }
     finally:
         release_port(port)
-        project_handler.kill(image_id)
+        project_handler.kill(container_id)
     return test_results
     # if test_order is not None:
     #     for test_id in test_order:
@@ -208,7 +199,7 @@ def worker_function(git_url, group_id, test_id):
     deactivate_status(group_id)
     logger.log_info(
         'reporting test results for team with group_id {} on git url {} to competition server'.format(group_id,
-                                                                                                           git_url))
+                                                                                                      git_url))
     report_test_results(group_id=group_id, test_id=test_id, test_results=test_results)
     logger.log_success(
         'test for team with group_id {} finished successfully'.format(group_id))
@@ -231,14 +222,11 @@ def process_request(git_url, group_id, test_id):
 
 
 @timeout(config.TEST_TIMEOUT_S, use_signals=False)
-def run_test(test_function, ip, group_id):
-    driver = group_status[group_id]['driver']
+def run_test(ip, port, test_id, group_id):
 
-    driver.get(ip)
-    driver.delete_all_cookies()
     try:
-        result, string_output = test_function(
-            ip, group_id, driver
+        result, string_output = tests.run_test(
+            config.TEST_FILES_PATH, config.TEST_MODULE, test_id, ip, port
         )
     except Exception as exception:
         logger.log_warn(
