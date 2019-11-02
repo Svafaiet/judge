@@ -25,7 +25,12 @@ class ContestantProjectHandler:
 
         out, error = run_cmd(cmd="./scripts/build_image.sh " + project_dir, directory=".")
         build_msg = out.decode("utf-8")
-        image_id = re.search(r"Successfully built ((\w|\d)+)\n", build_msg).group(1)
+#        TODO: check different error types: requirements.txt, ...
+        try:
+            image_id = re.search(r"Successfully built ((\w|\d)+)\n", build_msg).group(1)
+        except:
+            logger.log_error("failed to build docker image. exiting.")
+            exit(1)
 
         os.remove(os.path.join(project_dir, ContestantProjectHandler.CONTESTANT_SETTINGS_NAME))
 
@@ -44,7 +49,7 @@ class ContestantProjectHandler:
             name=container_name,
             oom_kill_disable=False,
             ports={"8000": port},
-                    
+
         )
         # run_cmd(cmd="./scripts/run_container.sh " + container_name + " " + image_id, directory=".")
         print("server_is_up")

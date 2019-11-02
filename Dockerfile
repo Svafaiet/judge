@@ -11,6 +11,7 @@ RUN pip install -r requirements.txt
 COPY . $DIR/
 
 EXPOSE 8000
+# make migrations
 CMD python3 manage.py migrate
 CMD python3 manage.py shell -c "from django.contrib.auth.models import User; User.objects.create_superuser('admin', 'admin@example.com', 'adminpass')"
 CMD python3 manage.py runserver 0.0.0.0:8000

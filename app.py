@@ -1,5 +1,6 @@
 import pickle as pk
 import sys
+import time
 from ast import literal_eval
 from datetime import datetime, timedelta
 from threading import Thread, Lock
@@ -132,8 +133,9 @@ def worker_run_tests(git_url: str, test_id: int, group_id: int):
 
     try:
         container_id = project_handler.run(image_id=image_id, port=port)
-        ip = "http://127.0.0.1"
+        ip = "http://localhost"
         try:
+            time.sleep(5)
             test_results = run_test(ip, port, test_id, group_id)
             test_results = {  # with assumption of is_accepted as first argument and log as second argument
                 "is_accepted": test_results[0],
@@ -151,44 +153,8 @@ def worker_run_tests(git_url: str, test_id: int, group_id: int):
         }
     finally:
         release_port(port)
-        # project_handler.kill(container_id)
+#        project_handler.kill(container_id)
     return test_results
-    # if test_order is not None:
-    #     for test_id in test_order:
-    #         test_name = 'test_{}'.format(test_id)
-    #         test_function = getattr(tests, test_name)
-    #
-    #         try:
-    #             test_result, string_output, stack_trace = run_test(test_function, ip, group_id)
-    #         except TimeoutError:
-    #             test_result, string_output, stack_trace = False, 'timeout', 'timeout'
-    #
-    #         test_results['verdict'] = 'ok' if test_result else 'ez_sag'
-    #         test_results['test_order'] = test_id
-    #         test_results['log'] = string_output
-    #         test_results['trace'] = stack_trace
-    #
-    # else:
-    #     for entry in dir(tests):
-    #         if not entry.startswith('_'):
-    #             test_function = getattr(tests, entry)
-    #
-    #             try:
-    #                 options = webdriver.ChromeOptions()
-    #                 options.add_argument('headless')
-    #                 driver = webdriver.Chrome(chrome_options=options)
-    #                 test_result, string_output, stack_trace = run_test(test_function, ip, group_id)
-    #                 driver.delete_all_cookies()
-    #                 utils.clear_cache(driver)
-    #                 driver.close()
-    #             except TimeoutError:
-    #                 test_result, string_output, stack_trace = False, 'timeout', 'timeout'
-    #
-    #             test_results[entry] = test_result
-    #             test_results['{}_log'.format(entry)] = string_output
-    #             test_results['{}_trace'.format(entry)] = stack_trace
-    #
-    # return test_results
 
 
 def worker_function(git_url, group_id, test_id):
@@ -211,12 +177,17 @@ def report_test_results(group_id, test_id, test_results):
     logger.log_log(test_results)
     test_results['group_id'] = group_id
     test_results['test_id'] = test_id
-    requests.post(
-        'http://{}:{}/{}'.format(config.REPORT_SERVER_HOST, config.REPORT_SERVER_PORT, config.REPORT_SERVER_PATH),
-        test_results)
+    try:
+        requests.post(
+            'http://{}:{}/{}'.format(config.REPORT_SERVER_HOST, config.REPORT_SERVER_PORT, config.REPORT_SERVER_PATH),
+            test_results)
+    except:
+        logger.log_error(f"failed to report test {test_id} results for team id {group_id}")
 
 
 def process_request(git_url, group_id, test_id):
+
+    request_data = request.form
     thread = Thread(target=worker_function, args=(git_url, group_id, test_id))
     thread.start()
 
@@ -225,12 +196,14 @@ def process_request(git_url, group_id, test_id):
 def run_test(ip, port, test_id, group_id):
 
     try:
+        logger.log_info(f'starting django server for group {group_id} on {ip}:{port}')
         result, string_output = tests.run_test(
             config.TEST_FILES_PATH, config.TEST_MODULE, test_id, ip, port
         )
     except Exception as exception:
         logger.log_warn(
             'test for for team with group_id {} ended with exception'.format(group_id))
+        print(exception)
         return False, ('Exception: ' + str(exception)), 'HMM'
 
     return result, string_output, 'HMM'
