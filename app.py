@@ -153,7 +153,7 @@ def worker_run_tests(git_url: str, test_id: int, group_id: int):
         }
     finally:
         release_port(port)
-#        project_handler.kill(container_id)
+        project_handler.kill(container_id)
     return test_results
 
 
