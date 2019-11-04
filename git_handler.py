@@ -41,20 +41,23 @@ def update_git(root_dir: str, group_id: str, git_url: str, branch_name="master")
     checkout_cmd = "git checkout " + branch_name
     out, error = _run_git(project_dir, checkout_cmd)
     if len(error) != 0 and re.match(GIT_CHECKOUT_ERROR_REGEX, str(error)):
-        logger.log_info("Failed to checkout {} in project {}".format(branch_name, project_name))
+        logger.log_info(
+            "Failed to checkout {} in project {} with error: {}".format(branch_name, project_name, str(error)))
     pull_cmd = "git pull origin"
     out, error = _run_git(project_dir, pull_cmd)
     if len(error) != 0:
-        logger.log_error("Failed while pulling {}".format(project_name))
+        logger.log_error("Failed while pulling {} with error: {}".format(project_name, str(error)))
         raise Exception("Failed while pulling")
     reset_origin_cmd = "git reset origin " + branch_name
     out, error = _run_git(project_dir, reset_origin_cmd)
     if len(error) != 0:
-        logger.log_error("Failed while reseting branch {} in project {}".format(branch_name, project_name))
+        logger.log_error(
+            "Failed while reseting branch {} in project {} with error: {}".format(branch_name, project_name,
+                                                                                  str(error)))
         raise Exception("Failed while reseting branch")
     clean_cmd = "git clean -fd"
     out, error = _run_git(project_dir, clean_cmd)
     if len(error) != 0:
-        logger.log_error("Failed while cleaning git in project {}".format(project_name))
+        logger.log_error("Failed while cleaning git in project {} with error: {}".format(project_name, str(error)))
         raise Exception("Failed while cleaning")
     return project_dir
