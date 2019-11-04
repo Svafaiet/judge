@@ -9,7 +9,7 @@ REPORT_SERVER_PORT = 8000
 REPORT_SERVER_PATH = 'contest/team/judge-result'
 
 TEST_FILES_PATH = '/home/soroushvt/code/webelopers/w_test'
-TEST_MODULE = "main_func.py"
+TEST_MODULE = "main_func"
 
 MAX_MEMORY_CONTESTANT = 50
 
