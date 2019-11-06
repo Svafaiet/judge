@@ -13,7 +13,6 @@ import requests
 import socket
 import project_handler as projects
 import test_runner as tests
-import utils
 from flask import Flask, request
 from timeout_decorator import timeout, TimeoutError
 
@@ -43,6 +42,7 @@ def find_and_lock_port() -> int:
                 s.close()
         lock.release()
         port += 1
+    logger.log_error("Could not find any port!")
     raise Exception("No Port Found")
 
 
@@ -121,11 +121,11 @@ def _check_url_availability(url):
     return urlopen(url).getcode()
 
 
-def worker_run_tests(git_url: str, test_id: int, group_id: int):
+def worker_run_tests(git_url: str, test_id: int, group_id: str):
     test_results = {}
 
     port = find_and_lock_port()
-    print("port is " + str(port))
+    logger.log_log("Port {} acquired for group {} in test {}".format(port, group_id, test_id))
 
     project_handler = projects.DEFAULT_PROJECT_HANDLER
 
@@ -186,8 +186,6 @@ def report_test_results(group_id, test_id, test_results):
 
 
 def process_request(git_url, group_id, test_id):
-
-    request_data = request.form
     thread = Thread(target=worker_function, args=(git_url, group_id, test_id))
     thread.start()
 
