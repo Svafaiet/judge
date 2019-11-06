@@ -36,6 +36,7 @@ class ContestantProjectHandler:
         if len(error) != 0:
             logger.log_info("error in removing migrations: {}".format(str(out)))
         out, error = run_cmd(cmd="./scripts/build_image.sh " + project_dir, directory=".")
+        logger.log_log("out: " + str(out) + " err: " + str(error))
         build_msg = out.decode("utf-8")
         logger.log_info("Project for group {} build successfully with message: {}".format(group_id, build_msg))
         try:
@@ -62,7 +63,7 @@ class ContestantProjectHandler:
         return image_id
 
     def run(self, image_id: str, port: int):
-        container_name = "webelopers_" + str(port)
+        container_name = "webelopers_" + str(port) + "_" + str(uuid.uuid1())
         try:
             result = self.client.containers.run(
                 image=image_id,
@@ -79,7 +80,7 @@ class ContestantProjectHandler:
                 "Project is running on container {} with id {} for image {}".format(container_name, result, image_id))
             return container_name
         except Exception as e:
-            logger.log_warn("Could not run container {}".format(container_name))
+            logger.log_warn("Could not run container {} with error {}".format(container_name).format(str(e)))
             raise Exception("Could not run docker")
 
     def kill(self, container_name: str):

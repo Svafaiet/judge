@@ -135,7 +135,7 @@ def worker_run_tests(git_url: str, test_id: int, group_id: str):
         container_id = project_handler.run(image_id=image_id, port=port)
         ip = "http://localhost"
         try:
-            time.sleep(5)
+            time.sleep(config.SLEEP_BEFORE_TEST)
             test_results = run_test(ip, port, test_id, group_id)
             test_results = {  # with assumption of is_accepted as first argument and log as second argument
                 "is_accepted": test_results[0],
