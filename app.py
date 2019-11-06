@@ -123,15 +123,15 @@ def _check_url_availability(url):
 
 def worker_run_tests(git_url: str, test_id: int, group_id: str):
     test_results = {}
-
-    port = find_and_lock_port()
-    logger.log_log("Port {} acquired for group {} in test {}".format(port, group_id, test_id))
+    container_id = None
+    port = None
 
     project_handler = projects.DEFAULT_PROJECT_HANDLER
 
-    image_id = project_handler.setup(repo_dir=config.REPO_PATH, group_id=group_id, git_url=git_url)
-
     try:
+        port = find_and_lock_port()
+        logger.log_log("Port {} acquired for group {} in test {}".format(port, group_id, test_id))
+        image_id = project_handler.setup(repo_dir=config.REPO_PATH, group_id=group_id, git_url=git_url)
         container_id = project_handler.run(image_id=image_id, port=port)
         ip = "http://localhost"
         try:
@@ -152,8 +152,10 @@ def worker_run_tests(git_url: str, test_id: int, group_id: str):
             "log": str(e),
         }
     finally:
-        release_port(port)
-        project_handler.kill(container_id)
+        if port is not None:
+            release_port(port)
+        if container_id is not None:
+            project_handler.kill(container_id)
     return test_results
 
 
@@ -192,7 +194,6 @@ def process_request(git_url, group_id, test_id):
 
 @timeout(config.TEST_TIMEOUT_S, use_signals=False)
 def run_test(ip, port, test_id, group_id):
-
     try:
         logger.log_info(f'starting django server for group {group_id} on {ip}:{port}')
         result, string_output = tests.run_test(
