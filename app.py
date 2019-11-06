@@ -152,10 +152,10 @@ def worker_run_tests(git_url: str, test_id: int, group_id: str):
             "log": str(e),
         }
     finally:
-        if port is not None:
-            release_port(port)
         if container_id is not None:
             project_handler.kill(container_id)
+        if port is not None:
+            release_port(port)
     return test_results
 
 
