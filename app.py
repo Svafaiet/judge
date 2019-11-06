@@ -184,7 +184,7 @@ def report_test_results(group_id, test_id, test_results):
             'http://{}:{}/{}'.format(config.REPORT_SERVER_HOST, config.REPORT_SERVER_PORT, config.REPORT_SERVER_PATH),
             test_results)
     except:
-        logger.log_error(f"failed to report test {test_id} results for team id {group_id}")
+        logger.log_error("failed to report test {} results for team id {}".format(test_id, group_id))
 
 
 def process_request(git_url, group_id, test_id):
@@ -195,7 +195,7 @@ def process_request(git_url, group_id, test_id):
 @timeout(config.TEST_TIMEOUT_S, use_signals=False)
 def run_test(ip, port, test_id, group_id):
     try:
-        logger.log_info(f'starting django server for group {group_id} on {ip}:{port}')
+        logger.log_info('starting django server for group {} on {}:{}'.format(group_id, ip, port))
         result, string_output = tests.run_test(
             config.TEST_FILES_PATH, config.TEST_MODULE, test_id, ip, port
         )
@@ -222,6 +222,6 @@ if __name__ == '__main__':
         else:
             logger.log_info('starting server on default port')
             runserver()
-    except Exception:
-        for gid in group_status:
-            group_status[gid]['driver'].close()
+    except Exception as e:
+        logger.log_error("app stoped with error".format(str(e)))
+
