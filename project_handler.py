@@ -60,20 +60,24 @@ class ContestantProjectHandler:
 
     def run(self, image_id: str, port: int):
         container_name = "webelopers_" + str(port)
-        result = self.client.containers.run(
-            image=image_id,
-            detach=True,
-            auto_remove=True,
-            mem_limit=str(MAX_MEMORY_CONTESTANT) + "m",
-            mem_reservation=str(MAX_MEMORY_CONTESTANT // 2) + "m",
-            name=container_name,
-            oom_kill_disable=False,
-            ports={"8000": port},
+        try:
+            result = self.client.containers.run(
+                image=image_id,
+                detach=True,
+                auto_remove=True,
+                mem_limit=str(MAX_MEMORY_CONTESTANT) + "m",
+                mem_reservation=str(MAX_MEMORY_CONTESTANT // 2) + "m",
+                name=container_name,
+                oom_kill_disable=False,
+                ports={"8000": port},
 
-        )
-        logger.log_success(
-            "Project is running on container {} with id {} for image {}".format(container_name, result, image_id))
-        return container_name
+            )
+            logger.log_success(
+                "Project is running on container {} with id {} for image {}".format(container_name, result, image_id))
+            return container_name
+        except Exception as e:
+            logger.log_warn("Could not run container {}".format(container_name))
+            raise Exception("Could not run docker")
 
     def kill(self, container_name: str):
         self.client.containers.get(container_name).stop()
