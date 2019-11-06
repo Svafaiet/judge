@@ -3,8 +3,8 @@ import re
 from utils import run_cmd
 import logger
 
-GIT_CLONE_ERROR_REGEX = "Please make sure you have the correct access rights"
-GIT_CHECKOUT_ERROR_REGEX = "Aborting"
+GIT_CLONE_ERROR_REGEX = r"Please make sure you have the correct access rights"
+GIT_CHECKOUT_ERROR_REGEX = r"Aborting"
 
 
 def _run_git(directory: str, git_cmd: str):
@@ -24,7 +24,7 @@ def update_git(root_dir: str, group_id: str, git_url: str, branch_name="master")
     try:
         project_name = re.search(r"/([^/]+)\.git", git_url).group(1)
     except Exception as e:
-        logger.log_error("Could not find project name in {}".format(git_url))
+        logger.log_warn("Could not find project name in {}".format(git_url))
         raise Exception("Unable to find git url")
     if not os.path.exists(os.path.join(group_dir, project_name)):
         logger.log_info("Cloning into repository {}".format(git_url))
@@ -36,28 +36,29 @@ def update_git(root_dir: str, group_id: str, git_url: str, branch_name="master")
             logger.log_log("Cloning into repository {} failed with error: {}".format(git_url, str(error)))
             raise Exception("Failed while Cloning the Project")
     else:
-        logger.log_info("Project already exists {}".format(project_name))
+        logger.log_info("GIT: Project already exists {}".format(project_name))
     project_dir = os.path.join(group_dir, project_name)
     checkout_cmd = "git checkout " + branch_name
     out, error = _run_git(project_dir, checkout_cmd)
     if len(error) != 0 and re.match(GIT_CHECKOUT_ERROR_REGEX, str(error)):
-        logger.log_info(
-            "Failed to checkout {} in project {} with error: {}".format(branch_name, project_name, str(error)))
+        logger.log_warn(
+            "GIT: Failed to checkout {} in project {} with error: {}".format(branch_name, project_name, str(error)))
     pull_cmd = "git pull origin"
     out, error = _run_git(project_dir, pull_cmd)
     if len(error) != 0:
-        logger.log_error("Failed while pulling {} with error: {}".format(project_name, str(error)))
-        raise Exception("Failed while pulling")
-    reset_origin_cmd = "git reset origin " + branch_name
+        logger.log_warn("GIT: Failed while pulling {} with error: {}".format(project_name, str(error)))
+        # raise Exception("Failed while pulling")
+    reset_origin_cmd = "git reset --hard origin/" + branch_name
     out, error = _run_git(project_dir, reset_origin_cmd)
     if len(error) != 0:
-        logger.log_error(
-            "Failed while reseting branch {} in project {} with error: {}".format(branch_name, project_name,
+        logger.log_warn(
+            "GIT: Failed while reseting branch {} in project {} with error: {}".format(branch_name, project_name,
                                                                                   str(error)))
-        raise Exception("Failed while reseting branch")
+        # raise Exception("Failed while reseting branch")
     clean_cmd = "git clean -fd"
     out, error = _run_git(project_dir, clean_cmd)
     if len(error) != 0:
-        logger.log_error("Failed while cleaning git in project {} with error: {}".format(project_name, str(error)))
-        raise Exception("Failed while cleaning")
+        logger.log_warn("GIT: Failed while cleaning git in project {} with error: {}".format(project_name, str(error)))
+        # raise Exception("Failed while cleaning")
+    logger.log_info("Updated git for project {} successfully".format(project_name))
     return project_dir
