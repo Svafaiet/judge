@@ -38,6 +38,15 @@ def update_git(root_dir: str, group_id: str, git_url: str, branch_name="master")
     else:
         logger.log_info("GIT: Project already exists {}".format(project_name))
     project_dir = os.path.join(group_dir, project_name)
+    if not os.path.exists(os.path.join(group_dir, project_name, ".git")):
+        logger.log_warn("GIT: Project folder {} dont have a .git. initiating git".format(project_dir))
+        init_cmd = "git_init"
+        _run_git(project_dir, init_cmd)  # TODO log errors
+    else:
+        rename_origin_cmd = "git remote rename origin old-origin"
+        _run_git(project_dir, rename_origin_cmd)  # TODO log errors
+    add_origin = "git remote add origin " + git_url
+    _run_git(project_dir, add_origin)  # TODO log error
     checkout_cmd = "git checkout " + branch_name
     out, error = _run_git(project_dir, checkout_cmd)
     if len(error) != 0 and re.match(GIT_CHECKOUT_ERROR_REGEX, str(error)):
@@ -53,7 +62,7 @@ def update_git(root_dir: str, group_id: str, git_url: str, branch_name="master")
     if len(error) != 0:
         logger.log_warn(
             "GIT: Failed while reseting branch {} in project {} with error: {}".format(branch_name, project_name,
-                                                                                  str(error)))
+                                                                                       str(error)))
         # raise Exception("Failed while reseting branch")
     clean_cmd = "git clean -fd"
     out, error = _run_git(project_dir, clean_cmd)
