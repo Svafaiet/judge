@@ -38,7 +38,7 @@ def update_git(root_dir: str, group_id: str, git_url: str, branch_name="master")
     else:
         logger.log_info("GIT: Project already exists {}".format(project_name))
     project_dir = os.path.join(group_dir, project_name)
-    if not os.path.exists(os.path.join(group_dir, project_name, ".git")):
+    if not os.path.exists(os.path.join(project_dir, ".git")):
         logger.log_warn("GIT: Project folder {} dont have a .git. initiating git".format(project_dir))
         init_cmd = "git_init"
         _run_git(project_dir, init_cmd)  # TODO log errors
@@ -52,7 +52,7 @@ def update_git(root_dir: str, group_id: str, git_url: str, branch_name="master")
     if len(error) != 0 and re.match(GIT_CHECKOUT_ERROR_REGEX, str(error)):
         logger.log_warn(
             "GIT: Failed to checkout {} in project {} with error: {}".format(branch_name, project_name, str(error)))
-    pull_cmd = "git pull origin"
+    pull_cmd = "git pull origin " + branch_name
     out, error = _run_git(project_dir, pull_cmd)
     if len(error) != 0:
         logger.log_warn("GIT: Failed while pulling {} with error: {}".format(project_name, str(error)))
