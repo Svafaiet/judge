@@ -32,6 +32,7 @@ class ContestantProjectHandler:
         except Exception:
             logger.log_error("Could not copy django settings for group {}".format(group_id))
             raise Exception("Could not copy django settings")
+        out, error = run_cmd(cmd="./scripts/remove_migrations.sh " + project_dir, directory=".")  # TODO handle logs
         out, error = run_cmd(cmd="./scripts/build_image.sh " + project_dir, directory=".")
         build_msg = out.decode("utf-8")
         logger.log_info("Project for group {} build successfully with message: {}".format(group_id, build_msg))
