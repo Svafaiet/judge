@@ -47,9 +47,9 @@ class ContestantProjectHandler:
                 logger.log_warn("Could not find requirements.txt for group {}".format(group_id))
                 raise Exception("Could not find requirements.txt file")
 
-            if re.findall(INSTALL_REQUIREMENTS_REGEX + SUCCESSFUL_STEP_REGEX + ERROR_REGEX, build_msg) is not None:
-                logger.log_warn("Could not install requirements for group {}".format(group_id))
-                raise Exception("Could not install requirements")
+#            if re.findall(INSTALL_REQUIREMENTS_REGEX + SUCCESSFUL_STEP_REGEX + ERROR_REGEX, build_msg) is not None:
+#                logger.log_warn("Could not install requirements for group {}".format(group_id))
+#                raise Exception("Could not install requirements")
             logger.log_warn("Failed to build docker image for group {}.".format(group_id))
             raise Exception("Failed to build docker image")
 
@@ -63,7 +63,7 @@ class ContestantProjectHandler:
         return image_id
 
     def run(self, image_id: str, port: int):
-        container_name = "webelopers_" + str(port)
+        container_name = "webelopers_" + str(port) + "_" + str(uuid.uuid1()) 
         try:
             result = self.client.containers.run(
                 image=image_id,

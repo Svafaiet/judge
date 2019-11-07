@@ -55,7 +55,7 @@ def update_git(root_dir: str, group_id: str, git_url: str, branch_name="master")
     pull_cmd = "git pull origin " + branch_name
     out, error = _run_git(project_dir, pull_cmd)
     if len(error) != 0:
-        logger.log_warn("GIT: Failed while pulling {} with error: {}".format(project_name, str(error)))
+        logger.log_log("GIT: MSG while pulling {} with error: {}".format(project_name, str(error)))
         # raise Exception("Failed while pulling")
     reset_origin_cmd = "git reset --hard origin/" + branch_name
     out, error = _run_git(project_dir, reset_origin_cmd)
