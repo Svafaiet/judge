@@ -16,22 +16,22 @@ ERROR_REGEX = r"ERROR:"
 
 
 class ContestantProjectHandler:
-    CONTESTANT_SETTINGS_NAME = "server_settings.py"
-    CONTESTANT_SETTINGS_PATH = os.path.join(BASE_DIR, "templates", CONTESTANT_SETTINGS_NAME)
+#    CONTESTANT_SETTINGS_NAME = "server_settings.py"
+#    CONTESTANT_SETTINGS_PATH = os.path.join(BASE_DIR, "templates", CONTESTANT_SETTINGS_NAME)
 
     def __init__(self):
         self.client = docker.from_env()
 
     def setup(self, repo_dir: str, group_id: str, git_url: str):
         project_dir = update_git(root_dir=repo_dir, group_id=group_id, git_url=git_url)
-        try:
-            copyfile(
-                ContestantProjectHandler.CONTESTANT_SETTINGS_PATH,
-                os.path.join(project_dir, ContestantProjectHandler.CONTESTANT_SETTINGS_NAME)
-            )
-        except Exception:
-            logger.log_error("Could not copy django settings for group {}".format(group_id))
-            raise Exception("Could not copy django settings")
+#        try:
+#            copyfile(
+#                ContestantProjectHandler.CONTESTANT_SETTINGS_PATH,
+#                os.path.join(project_dir, ContestantProjectHandler.CONTESTANT_SETTINGS_NAME)
+#            )
+#        except Exception:
+#            logger.log_error("Could not copy django settings for group {}".format(group_id))
+#            raise Exception("Could not copy django settings")
         out, error = run_cmd(cmd="./scripts/remove_migrations.sh " + project_dir, directory=".")  # TODO handle logs
         if len(error) != 0:
             logger.log_info("error in removing migrations: {}".format(str(error)))
@@ -53,11 +53,11 @@ class ContestantProjectHandler:
             logger.log_warn("Failed to build docker image for group {}.".format(group_id))
             raise Exception("Failed to build docker image")
 
-        try:
-            os.remove(os.path.join(project_dir, ContestantProjectHandler.CONTESTANT_SETTINGS_NAME))
-        except Exception:
-            logger.log_error("Could not remove django settings for group {}".format(group_id))
-            raise Exception("Could not remove django settings")
+#        try:
+#            os.remove(os.path.join(project_dir, ContestantProjectHandler.CONTESTANT_SETTINGS_NAME))
+#        except Exception:
+#            logger.log_error("Could not remove django settings for group {}".format(group_id))
+#            raise Exception("Could not remove django settings")
 
         logger.log_success("Image built for team {} successfully".format(group_id))
         return image_id
