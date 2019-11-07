@@ -86,6 +86,10 @@ def handle_request():
         logger.log_error('malformed post request data.')
         return 'malformed post request data.', 400
 
+    if 'secret' not in request_data or request_data['secret'] != config.REPORT_SECRET_KEY:
+        logger.log_error("unauthorized data")
+        return 'unauthorized request', 403
+
     group_id = request_data['group_id']
 
     if test_and_set_active(group_id):
@@ -152,8 +156,8 @@ def worker_run_tests(git_url: str, test_id: int, group_id: str):
             "log": str(e),
         }
     finally:
-#        if container_id is not None:
-#            project_handler.kill(container_id)
+        #        if container_id is not None:
+        #            project_handler.kill(container_id)
         if port is not None:
             release_port(port)
     return test_results
@@ -179,6 +183,7 @@ def report_test_results(group_id, test_id, test_results):
     logger.log_log(test_results)
     test_results['group_id'] = group_id
     test_results['test_id'] = test_id
+    test_results['secret'] = config.REPORT_SECRET_KEY
     try:
         requests.post(
             'http://{}:{}/{}'.format(config.REPORT_SERVER_HOST, config.REPORT_SERVER_PORT, config.REPORT_SERVER_PATH),
@@ -224,4 +229,3 @@ if __name__ == '__main__':
             runserver()
     except Exception as e:
         logger.log_error("app stoped with error".format(str(e)))
-
