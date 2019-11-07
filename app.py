@@ -7,6 +7,7 @@ from threading import Thread, Lock
 from urllib.error import URLError
 from urllib.request import urlopen
 
+import json
 import configuration as config
 import logger
 import requests
@@ -156,8 +157,8 @@ def worker_run_tests(git_url: str, test_id: int, group_id: str):
             "log": str(e),
         }
     finally:
-        #        if container_id is not None:
-        #            project_handler.kill(container_id)
+        if container_id is not None:
+            project_handler.kill(container_id)
         if port is not None:
             release_port(port)
     return test_results
@@ -184,10 +185,12 @@ def report_test_results(group_id, test_id, test_results):
     test_results['group_id'] = group_id
     test_results['test_id'] = test_id
     test_results['secret'] = config.REPORT_SECRET_KEY
-    try:
+    try: 
+        headers = {'Content-type': 'application/json', 'Accept': 'text/plain'}
         requests.post(
             'http://{}:{}/{}'.format(config.REPORT_SERVER_HOST, config.REPORT_SERVER_PORT, config.REPORT_SERVER_PATH),
-            test_results)
+            data=json.dumps({'data': test_results}), headers=headers)
+        logger.log_success("Report test resutls for group {} successfull".format(group_id))
     except:
         logger.log_error("failed to report test {} results for team id {}".format(test_id, group_id))
 
