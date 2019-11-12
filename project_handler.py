@@ -32,9 +32,9 @@ class ContestantProjectHandler:
 #        except Exception:
 #            logger.log_error("Could not copy django settings for group {}".format(group_id))
 #            raise Exception("Could not copy django settings")
-        out, error = run_cmd(cmd="./scripts/remove_migrations.sh " + project_dir, directory=".")  # TODO handle logs
+        out, error = run_cmd(cmd="./scripts/remove_extra_files.sh " + project_dir, directory=".")  # TODO handle logs
         if len(error) != 0:
-            logger.log_info("error in removing migrations: {}".format(str(error)))
+            logger.log_info("error in removing extras: {}".format(str(error)))
         out, error = run_cmd(cmd="./scripts/build_image.sh " + project_dir, directory=".")
         logger.log_log("out: " + str(out) + " err: " + str(error))
         build_msg = out.decode("utf-8")
@@ -51,7 +51,7 @@ class ContestantProjectHandler:
 #                logger.log_warn("Could not install requirements for group {}".format(group_id))
 #                raise Exception("Could not install requirements")
             logger.log_warn("Failed to build docker image for group {}.".format(group_id))
-            raise Exception("Failed to build docker image")
+            raise Exception("Build error - Build Message Follows\n\n{}".format(build_msg))
 
 #        try:
 #            os.remove(os.path.join(project_dir, ContestantProjectHandler.CONTESTANT_SETTINGS_NAME))
