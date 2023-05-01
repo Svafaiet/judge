@@ -1,5 +1,5 @@
 docker==4.1.0
-Flask==1.1.1
+Flask==2.3.2
 timeout-decorator==0.4.1
 selenium==3.141.0
 requests==2.22.0
